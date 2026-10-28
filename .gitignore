@@ -1,0 +1,74 @@
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+env/
+ENV/
+
+# Python testing and tooling
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Machine Learning artifacts
+models/*.pkl
+models/*.joblib
+models/*.pt
+models/*.pth
+data/raw/
+data/processed/
+*.model
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# React / Vite build output
+dist/
+.vite/
+coverage/
+
+# Logs
+logs/
+*.log
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Database dumps and local database files
+*.sql.gz
+*.dump
+*.sqlite
+*.sqlite3
+
+# Local configuration
+*.local
+
+# Temporary files
+tmp/
+temp/
