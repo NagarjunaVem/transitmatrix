@@ -74,7 +74,34 @@ This repository implements the complete database and SQL engineering foundation 
 
 ## 3. Database Initialization Instructions
 
-### Method A: Single Command Script Sequence
+### Method A: One-Click Initializer (Recommended)
+You can initialize and seed the entire database with a single click.
+
+> [!NOTE]
+> You only need to run **EITHER** `init_database.bat` **OR** `init_database.ps1` (not both). Both scripts execute the exact same database setup and verification tasks. `init_database.bat` is recommended for standard Windows use.
+
+- **Option 1 (Recommended): Windows Command Prompt / Desktop Batch Script**
+  Double-click `init_database.bat` in File Explorer, or open cmd and run:
+  ```cmd
+  init_database.bat
+  ```
+
+- **Option 2: PowerShell Script**
+  Right-click and choose "Run with PowerShell", or execute:
+  ```powershell
+  .\init_database.ps1
+  ```
+
+The utility automatically:
+1. Detects your MySQL / XAMPP installation (`C:\xampp` or `D:\xampp`).
+2. Verifies live connection to port 3306.
+3. Executes `schema.sql`, `indexes.sql`, `views.sql`, `triggers.sql`, `procedures.sql`, `security.sql`, and `seed.sql` in strict topological sequence.
+4. Verifies and displays the live row counts for all 18 tables.
+5. Offers an interactive prompt to execute the 21 advanced SQL query demonstrations.
+
+---
+
+### Method B: Single Command Script Sequence (Manual)
 Ensure MySQL 8.0+ is running, then execute the SQL scripts in order:
 
 ```bash

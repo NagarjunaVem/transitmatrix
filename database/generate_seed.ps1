@@ -431,12 +431,12 @@ for ($pr = 1; $pr -le 50; $pr++) {
 [void]$sb.AppendLine("-- -----------------------------------------------------------------------------")
 [void]$sb.AppendLine("-- 17. AUDIT LOGS (80 historical compliance log entries)")
 [void]$sb.AppendLine("-- -----------------------------------------------------------------------------")
-[void]$sb.AppendLine("INSERT INTO audit_logs (log_id, table_name, record_id, action, old_values, new_values, changed_by, changed_at) VALUES")
+[void]$sb.AppendLine("INSERT INTO audit_logs (table_name, record_id, action, old_values, new_values, changed_by, changed_at) VALUES")
 $auditData = @()
 for ($a = 1; $a -le 80; $a++) {
     $oldVal = "{`"status`": `"PENDING`"}"
     $newVal = "{`"status`": `"CONFIRMED`"}"
-    $auditData += "($a, 'bookings', '$a', 'UPDATE', '$oldVal', '$newVal', 'SYSTEM', '2026-10-15 12:00:00')"
+    $auditData += "('bookings', '$a', 'UPDATE', '$oldVal', '$newVal', 'SYSTEM', '2026-10-15 12:00:00')"
 }
 [void]$sb.AppendLine(($auditData -join ",`n") + ";`n")
 

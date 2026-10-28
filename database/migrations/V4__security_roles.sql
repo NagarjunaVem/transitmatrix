@@ -57,3 +57,23 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON transitmatrix.demand_predictions TO 'tra
 GRANT SELECT ON transitmatrix.audit_logs TO 'transit_analyst_role';
 GRANT EXECUTE ON PROCEDURE transitmatrix.sp_route_revenue_report TO 'transit_analyst_role';
 
+-- -----------------------------------------------------------------------------
+-- Users Provisioning and Default Roles
+-- -----------------------------------------------------------------------------
+CREATE USER IF NOT EXISTS 'tm_admin'@'%' IDENTIFIED BY 'AdminTransit#2026';
+CREATE USER IF NOT EXISTS 'tm_operator'@'%' IDENTIFIED BY 'OperatorTransit#2026';
+CREATE USER IF NOT EXISTS 'tm_passenger'@'%' IDENTIFIED BY 'PassengerTransit#2026';
+CREATE USER IF NOT EXISTS 'tm_analyst'@'%' IDENTIFIED BY 'AnalystTransit#2026';
+
+GRANT 'transit_admin_role' TO 'tm_admin'@'%';
+GRANT 'transit_operator_role' TO 'tm_operator'@'%';
+GRANT 'transit_passenger_role' TO 'tm_passenger'@'%';
+GRANT 'transit_analyst_role' TO 'tm_analyst'@'%';
+
+SET DEFAULT ROLE 'transit_admin_role' FOR 'tm_admin'@'%';
+SET DEFAULT ROLE 'transit_operator_role' FOR 'tm_operator'@'%';
+SET DEFAULT ROLE 'transit_passenger_role' FOR 'tm_passenger'@'%';
+SET DEFAULT ROLE 'transit_analyst_role' FOR 'tm_analyst'@'%';
+
+FLUSH PRIVILEGES;
+

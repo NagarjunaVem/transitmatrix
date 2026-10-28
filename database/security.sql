@@ -87,10 +87,10 @@ GRANT 'transit_analyst_role' TO 'tm_analyst'@'%';
 -- -----------------------------------------------------------------------------
 -- 5. Set Default Roles
 -- -----------------------------------------------------------------------------
-SET DEFAULT ROLE 'transit_admin_role' TO 'tm_admin'@'%';
-SET DEFAULT ROLE 'transit_operator_role' TO 'tm_operator'@'%';
-SET DEFAULT ROLE 'transit_passenger_role' TO 'tm_passenger'@'%';
-SET DEFAULT ROLE 'transit_analyst_role' TO 'tm_analyst'@'%';
+SET DEFAULT ROLE 'transit_admin_role' FOR 'tm_admin'@'%';
+SET DEFAULT ROLE 'transit_operator_role' FOR 'tm_operator'@'%';
+SET DEFAULT ROLE 'transit_passenger_role' FOR 'tm_passenger'@'%';
+SET DEFAULT ROLE 'transit_analyst_role' FOR 'tm_analyst'@'%';
 
 FLUSH PRIVILEGES;
 
