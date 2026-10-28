@@ -9,7 +9,7 @@ class DelayCreateRequest(BaseModel):
     trip_id: int
     station_id: int
     delay_minutes: int = Field(..., ge=1)
-    delay_reason: str = Field(..., pattern="^(SIGNAL_FAILURE|TRACK_MAINTENANCE|WEATHER|ROLLING_STOCK_DEFECT|CONGESTION|ACCIDENT|OTHER)$")
+    delay_reason: str = Field(..., pattern="^(WEATHER|TRACK_MAINTENANCE|SIGNAL_FAILURE|CONGESTION|TECHNICAL_GLITCH|ACCIDENT|OTHER)$")
     incident_description: Optional[str] = Field(None, max_length=255)
 
 
