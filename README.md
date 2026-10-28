@@ -163,3 +163,60 @@ Individual query scripts are available under `database/queries/` (`q01` through 
 ### For Person 4 (Machine Learning Engineer)
 - Extract historical training data by joining `bookings`, `tickets`, `trips`, and `delays`.
 - Persist forecasted passenger counts directly into `demand_predictions` matching `(route_id, prediction_date, model_version)`.
+
+---
+
+## 6. Backend Setup & Execution Guide (Person 2)
+
+### 6.1 Environment Configuration
+Copy `.env.example` to `.env` and verify database credentials:
+```bash
+cp .env.example .env
+```
+
+### 6.2 Python Virtual Environment & Dependencies
+```bash
+# Create virtual environment
+python -m venv .venv
+
+# Activate virtual environment
+# Windows:
+.venv\Scripts\activate
+# Linux/macOS:
+source .venv/bin/activate
+
+# Install backend dependencies
+pip install -r backend/requirements.txt
+```
+
+### 6.3 Run Database Migrations (Raw SQL)
+To apply versioned migrations `V1` to `V5` automatically with tracking in `schema_version`:
+```bash
+python -m backend.app.db.migrate
+```
+
+### 6.4 Launch FastAPI Backend Server
+```bash
+cd backend
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+- Interactive Swagger UI: `http://localhost:8000/docs`
+- ReDoc Documentation: `http://localhost:8000/redoc`
+- Health Check: `http://localhost:8000/api/health`
+
+### 6.5 Run Automated Test Suite
+```bash
+pytest backend/tests -v
+```
+
+### 6.6 Machine Learning Demand Forecasting Pipeline
+To run model training, evaluate MAE/RMSE against baseline, and serialize model artifact:
+```bash
+python ml/train_model.py
+```
+
+### 6.7 Docker Compose Deployment
+To run both MySQL 8.0 and the FastAPI backend in synchronized containers:
+```bash
+docker compose up --build
+```

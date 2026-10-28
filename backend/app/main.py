@@ -23,6 +23,7 @@ from app.api.routes import (
     reports,
     db_lab,
     predictions,
+    waitlists,
 )
 
 
@@ -70,6 +71,7 @@ app.include_router(delays.router, prefix=settings.API_V1_STR)
 app.include_router(reports.router, prefix=settings.API_V1_STR)
 app.include_router(db_lab.router, prefix=settings.API_V1_STR)
 app.include_router(predictions.router, prefix=settings.API_V1_STR)
+app.include_router(waitlists.router, prefix=settings.API_V1_STR)
 
 
 @app.get("/api/health", tags=["Health"])
