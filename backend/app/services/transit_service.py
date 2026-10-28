@@ -152,9 +152,15 @@ class TransitService:
 
     # ---------------- Trips & Search ----------------
     @staticmethod
-    def list_trips(limit: int = 50, offset: int = 0, status: Optional[str] = None, trip_date: Optional[date] = None):
+    def list_trips(
+        limit: int = 50,
+        offset: int = 0,
+        status: Optional[str] = None,
+        trip_date: Optional[date] = None,
+        transport_type: Optional[str] = None
+    ):
         with get_db_connection() as conn:
-            return TripRepository.list_trips(conn, limit, offset, status, trip_date)
+            return TripRepository.list_trips(conn, limit, offset, status, trip_date, transport_type)
 
     @staticmethod
     def get_trip_by_id(trip_id: int):
@@ -172,9 +178,9 @@ class TransitService:
             return TripRepository.get_by_id(conn, trip_id)
 
     @staticmethod
-    def search_trips(origin_code: str, destination_code: str, travel_date: date):
+    def search_trips(origin_code: str, destination_code: str, travel_date: date, transport_type: Optional[str] = None):
         with get_db_connection() as conn:
-            return TripRepository.search_trips(conn, origin_code, destination_code, travel_date)
+            return TripRepository.search_trips(conn, origin_code, destination_code, travel_date, transport_type)
 
     # ---------------- Passengers ----------------
     @staticmethod

@@ -48,6 +48,17 @@ def get_connection():
     return pool.get_connection()
 
 
+def validate_identifier(identifier: str, allowed: set[str]) -> str:
+    """
+    Validates an SQL identifier (column name, table name, or sort direction)
+    against a strict allowlist to prevent SQL injection in dynamic queries.
+    """
+    clean_id = identifier.strip().lower()
+    if clean_id not in {item.lower() for item in allowed}:
+        raise ValueError(f"Invalid SQL identifier '{identifier}'. Allowed values: {sorted(list(allowed))}")
+    return identifier
+
+
 @contextmanager
 def get_db_connection() -> Generator:
     """

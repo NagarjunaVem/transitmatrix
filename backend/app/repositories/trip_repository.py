@@ -13,7 +13,8 @@ class TripRepository:
         limit: int = 50,
         offset: int = 0,
         status: Optional[str] = None,
-        trip_date: Optional[date] = None
+        trip_date: Optional[date] = None,
+        transport_type: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         cursor = connection.cursor(dictionary=True)
         try:
@@ -25,6 +26,9 @@ class TripRepository:
             if trip_date:
                 conditions.append("tr.trip_date = %s")
                 params.append(trip_date)
+            if transport_type:
+                conditions.append("s.service_type = %s")
+                params.append(transport_type)
 
             where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
@@ -135,17 +139,19 @@ class TripRepository:
         connection,
         origin_code: str,
         destination_code: str,
-        travel_date: date
+        travel_date: date,
+        transport_type: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Executes stored procedure sp_search_trips with fallback to direct SQL multi-table join.
         """
         cursor = connection.cursor(dictionary=True)
         try:
+            results = []
             try:
                 cursor.callproc("sp_search_trips", (origin_code.upper(), destination_code.upper(), travel_date))
                 for result in cursor.stored_results():
-                    return result.fetchall()
+                    results = result.fetchall()
             except Exception:
                 # Direct SQL Join Fallback matching sp_search_trips
                 query = """
@@ -186,7 +192,11 @@ class TripRepository:
                     ORDER BY tr.scheduled_departure ASC
                 """
                 cursor.execute(query, (origin_code.upper(), destination_code.upper(), travel_date))
-                return cursor.fetchall()
-            return []
+                results = cursor.fetchall()
+
+            if transport_type and results:
+                results = [r for r in results if r.get("service_type") == transport_type.upper()]
+
+            return results
         finally:
             cursor.close()

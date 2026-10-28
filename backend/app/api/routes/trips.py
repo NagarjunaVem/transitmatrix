@@ -14,13 +14,14 @@ router = APIRouter(prefix="/trips", tags=["Trips"])
 def search_trips(
     origin_code: str = Query(..., description="Origin Station Code, e.g. NDLS"),
     destination_code: str = Query(..., description="Destination Station Code, e.g. MMCT"),
-    travel_date: date = Query(..., description="Date of travel (YYYY-MM-DD)")
+    travel_date: date = Query(..., description="Date of travel (YYYY-MM-DD)"),
+    transport_type: Optional[str] = Query(None, description="Transport service type (e.g. RAJDHANI, VANDE_BHARAT)")
 ):
     """
-    Search available trips between origin and destination on a given date.
+    Search available trips between origin and destination on a given date and optional transport type.
     Executes stored procedure sp_search_trips with live seat counts.
     """
-    return TransitService.search_trips(origin_code, destination_code, travel_date)
+    return TransitService.search_trips(origin_code, destination_code, travel_date, transport_type)
 
 
 @router.get("", response_model=List[TripResponse])
@@ -28,12 +29,13 @@ def get_trips(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     status: Optional[str] = None,
-    trip_date: Optional[date] = None
+    trip_date: Optional[date] = None,
+    transport_type: Optional[str] = Query(None, description="Transport service type")
 ):
     """
     List scheduled journey trips with filtering options.
     """
-    return TransitService.list_trips(limit, offset, status, trip_date)
+    return TransitService.list_trips(limit, offset, status, trip_date, transport_type)
 
 
 @router.get("/{trip_id}", response_model=TripResponse)
