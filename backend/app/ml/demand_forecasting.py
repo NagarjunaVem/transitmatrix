@@ -220,11 +220,10 @@ class DemandForecaster:
             provenance = "synthetic_simulation"
         else:
             df = DemandForecaster.extract_training_data()
-            if len(df) < 15:
-                logger.info(f"DB has only {len(df)} samples; augmenting with synthetic simulation data.")
-                df_synth = DemandForecaster.generate_synthetic_data(350)
-                df = pd.concat([df_synth, df], ignore_index=True) if len(df) > 0 else df_synth
-                provenance = "augmented_hybrid"
+            if len(df) < 15 or (len(df) > 0 and (df["actual_passenger_demand"].std() < 5.0 or df["actual_passenger_demand"].max() < 15)):
+                logger.info("Database contains uniform toy seed records; using realistic transit volume simulation dataset.")
+                df = DemandForecaster.generate_synthetic_data(400)
+                provenance = "synthetic_simulation"
             else:
                 provenance = "mysql_live_data"
 

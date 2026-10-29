@@ -40,7 +40,7 @@ def run_training(force_synthetic: bool = False):
         print("  METRIC COMPARISON:      BASELINE       RANDOM FOREST   IMPROVEMENT")
         print(f"  MAE (Mean Abs Error):   {metrics['baseline_mae']:<14.2f} {metrics['rf_mae']:<15.2f} {metrics['mae_improvement_pct']}%")
         print(f"  RMSE (Root Mean Sq):    {metrics['baseline_rmse']:<14.2f} {metrics['rf_rmse']:<15.2f} {metrics['rmse_improvement_pct']}%")
-        print(f"  R² Score (Variance):    {metrics.get('baseline_r2', 0.0):<14.4f} {metrics.get('rf_r2', 0.0):<15.4f}")
+        print(f"  R^2 Score (Variance):    {metrics.get('baseline_r2', 0.0):<14.4f} {metrics.get('rf_r2', 0.0):<15.4f}")
         print("------------------------------------------------------------------")
 
         print("\n[3/3] Feature Importance:")

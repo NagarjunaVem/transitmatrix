@@ -124,11 +124,11 @@ CREATE TABLE routes (
     CONSTRAINT chk_routes_duration CHECK (duration_est_minutes > 0),
     CONSTRAINT fk_routes_origin FOREIGN KEY (origin_station_id)
         REFERENCES stations (station_id)
-        ON UPDATE CASCADE
+        ON UPDATE RESTRICT
         ON DELETE RESTRICT,
     CONSTRAINT fk_routes_dest FOREIGN KEY (destination_station_id)
         REFERENCES stations (station_id)
-        ON UPDATE CASCADE
+        ON UPDATE RESTRICT
         ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -469,6 +469,7 @@ CREATE TABLE demand_predictions (
     confidence_upper_bound INT NOT NULL,
     model_name VARCHAR(50) NOT NULL DEFAULT 'RandomForestRegressor',
     model_version VARCHAR(20) NOT NULL DEFAULT 'v1.0',
+    features_json JSON NULL,
     generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_predictions_date_model UNIQUE (route_id, prediction_date, model_version),
     CONSTRAINT chk_pred_demand CHECK (predicted_passenger_demand >= 0),

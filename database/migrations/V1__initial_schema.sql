@@ -75,11 +75,11 @@ CREATE TABLE IF NOT EXISTS routes (
     CONSTRAINT chk_routes_duration CHECK (duration_est_minutes > 0),
     CONSTRAINT fk_routes_origin FOREIGN KEY (origin_station_id)
         REFERENCES stations (station_id)
-        ON UPDATE CASCADE
+        ON UPDATE RESTRICT
         ON DELETE RESTRICT,
     CONSTRAINT fk_routes_dest FOREIGN KEY (destination_station_id)
         REFERENCES stations (station_id)
-        ON UPDATE CASCADE
+        ON UPDATE RESTRICT
         ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

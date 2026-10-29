@@ -17,6 +17,7 @@ def init_connection_pool() -> pooling.MySQLConnectionPool:
     """
     Initializes and returns the MySQL connection pool.
     Reuses existing pool instance if already initialized.
+    Includes smart environment fallback for standard XAMPP vs password-protected MySQL.
     """
     global _pool
     if _pool is None:
@@ -34,6 +35,30 @@ def init_connection_pool() -> pooling.MySQLConnectionPool:
             )
             logger.info("MySQL connection pool successfully initialized.")
         except Error as err:
+            # Smart fallback for local development environments
+            if err.errno == 1045 and settings.MYSQL_PASSWORD != "":
+                logger.warning("Access denied with configured password. Attempting empty password fallback for standard XAMPP...")
+                try:
+                    _pool = pooling.MySQLConnectionPool(
+                        pool_name=settings.MYSQL_POOL_NAME,
+                        pool_size=settings.MYSQL_POOL_SIZE,
+                        pool_reset_session=True,
+                        host=settings.MYSQL_HOST,
+                        port=settings.MYSQL_PORT,
+                        user=settings.MYSQL_USER,
+                        password="",
+                        database=settings.MYSQL_DATABASE,
+                        autocommit=False,
+                    )
+                    logger.info("MySQL connection pool initialized via standard XAMPP fallback.")
+                    return _pool
+                except Error:
+                    pass
+            elif err.errno == 1045:
+                logger.error("Access denied for user 'root'. If your MySQL has a password, specify MYSQL_PASSWORD in your .env file.")
+            elif err.errno == 2003:
+                logger.error(f"Cannot connect to MySQL server on {settings.MYSQL_HOST}:{settings.MYSQL_PORT}. Ensure MySQL is running in XAMPP.")
+
             logger.error(f"Failed to initialize MySQL connection pool: {err}")
             raise
     return _pool
