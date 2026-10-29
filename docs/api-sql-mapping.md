@@ -284,3 +284,96 @@ This document maps every FastAPI REST endpoint to its exact underlying parameter
 - **Method & Route:** `GET /api/database-lab/execute/{query_id}`
 - **Access Role:** `ADMIN`, `STAFF`
 - **Raw SQL:** Executes the selected query (`Q01` - `Q21`) directly against MySQL, measures runtime, and runs `EXPLAIN <query>`.
+
+
+---
+
+## 7. Machine Learning & Demand Forecasting Endpoints (`/api/ml`, `/api/predictions`)
+*Maintained by Person 4 (AI/ML Engineer)*
+
+### 7.1 Historical Feature Extraction Pipeline
+- **Method & Route:** `GET /api/ml/features`, `GET /api/predictions/features`
+- **Access Role:** `ADMIN`, `STAFF`
+- **Raw SQL Operations:**
+  ```sql
+  SELECT 
+      r.route_id,
+      r.route_code,
+      r.total_distance_km,
+      r.duration_est_minutes,
+      tr.trip_id,
+      tr.service_id,
+      s.service_number,
+      s.service_type,
+      tr.trip_date,
+      HOUR(tr.scheduled_departure) AS departure_hour,
+      DAYOFWEEK(tr.trip_date) AS day_of_week,
+      MONTH(tr.trip_date) AS month_of_year,
+      CASE WHEN DAYOFWEEK(tr.trip_date) IN (1, 7) THEN 1 ELSE 0 END AS is_weekend,
+      tr.base_fare AS avg_base_fare,
+      COUNT(DISTINCT tr.trip_id) AS trips_count,
+      COUNT(DISTINCT b.booking_id) AS booking_count,
+      COALESCE(SUM(CASE WHEN b.booking_status = 'CANCELLED' THEN 1 ELSE 0 END), 0) AS cancellations_count,
+      COALESCE(SUM(CASE WHEN b.booking_status <> 'CANCELLED' THEN b.total_passengers ELSE 0 END), 0) AS actual_passenger_demand
+  FROM routes r
+  JOIN trips tr ON r.route_id = tr.route_id
+  JOIN services s ON tr.service_id = s.service_id
+  LEFT JOIN bookings b ON tr.trip_id = b.trip_id
+  GROUP BY 
+      r.route_id, r.route_code, r.total_distance_km, r.duration_est_minutes,
+      tr.trip_id, tr.service_id, s.service_number, s.service_type,
+      tr.trip_date, tr.scheduled_departure, tr.base_fare
+  ORDER BY tr.trip_date ASC, tr.scheduled_departure ASC;
+  ```
+
+### 7.2 Real-Time Demand Forecast & Persistence
+- **Method & Route:** `GET /api/ml/forecast`, `POST /api/predictions/forecast`
+- **Access Role:** Public / `ADMIN`, `STAFF`
+- **Raw SQL Operations:**
+  ```sql
+  -- Step 1: Query Corridor Distance and Duration Metadata
+  SELECT route_id, route_code, route_name, total_distance_km, duration_est_minutes
+  FROM routes
+  WHERE route_id = %s;
+
+  -- Step 2: Persist Generated Forecast with Confidence Bounds
+  INSERT INTO demand_predictions (
+      route_id, prediction_date, predicted_passenger_demand,
+      confidence_lower_bound, confidence_upper_bound,
+      model_name, model_version, features_json
+  ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+  ON DUPLICATE KEY UPDATE
+      predicted_passenger_demand = VALUES(predicted_passenger_demand),
+      confidence_lower_bound = VALUES(confidence_lower_bound),
+      confidence_upper_bound = VALUES(confidence_upper_bound),
+      features_json = VALUES(features_json);
+  ```
+
+### 7.3 List Historical Demand Predictions
+- **Method & Route:** `GET /api/predictions`
+- **Access Role:** Public
+- **Raw SQL Operations:**
+  ```sql
+  SELECT dp.prediction_id, dp.route_id, r.route_code, r.route_name,
+         dp.prediction_date,
+         dp.predicted_passenger_demand AS predicted_demand,
+         dp.confidence_lower_bound AS confidence_interval_low,
+         dp.confidence_upper_bound AS confidence_interval_high,
+         dp.model_name, dp.model_version, dp.features_json,
+         dp.generated_at AS created_at
+  FROM demand_predictions dp
+  JOIN routes r ON dp.route_id = r.route_id
+  WHERE dp.route_id = %s
+  ORDER BY dp.prediction_date DESC, dp.prediction_id DESC
+  LIMIT %s;
+  ```
+
+### 7.4 Model Performance Metrics & Verification
+- **Method & Route:** `GET /api/ml/metrics`
+- **Access Role:** Public / Authenticated
+- **Description:** Returns fitted model evaluation metrics (MAE, RMSE, R² for both Random Forest and Historical Average baseline, train/test sample sizes, feature importances).
+
+### 7.5 Registered Models Catalog
+- **Method & Route:** `GET /api/ml/models`
+- **Access Role:** Public / Authenticated
+- **Description:** Enumerates active ML models (`RandomForestRegressor` and `HistoricalAverageBaseline`), versions, artifact storage paths, and input features.

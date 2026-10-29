@@ -1,0 +1,38 @@
+# TransitMatrix - API Routes Package
+from app.api.routes import (
+    auth,
+    stations,
+    routes,
+    services,
+    vehicles,
+    trips,
+    passengers,
+    bookings,
+    payments,
+    cancellations,
+    delays,
+    reports,
+    db_lab,
+    predictions,
+    ml,
+    waitlists,
+)
+
+__all__ = [
+    "auth",
+    "stations",
+    "routes",
+    "services",
+    "vehicles",
+    "trips",
+    "passengers",
+    "bookings",
+    "payments",
+    "cancellations",
+    "delays",
+    "reports",
+    "db_lab",
+    "predictions",
+    "ml",
+    "waitlists",
+]
