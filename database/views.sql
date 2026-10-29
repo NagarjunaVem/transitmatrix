@@ -65,12 +65,13 @@ LEFT JOIN payments pay ON b.booking_id = pay.booking_id;
 -- -----------------------------------------------------------------------------
 -- View 2: v_trip_availability
 -- Real-time seat inventory summary grouped by trip and seat class,
--- calculating occupancy percentage.
+-- calculating occupancy percentage. Supports both alias sets.
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE VIEW v_trip_availability AS
 SELECT 
     tr.trip_id,
     tr.trip_date,
+    tr.scheduled_departure,
     tr.status AS trip_status,
     s.service_number,
     s.service_name,
@@ -78,19 +79,24 @@ SELECT
     r.route_name,
     st.seat_class,
     COUNT(tsi.inventory_id) AS total_inventory_seats,
+    COUNT(tsi.inventory_id) AS total_class_capacity,
     SUM(CASE WHEN tsi.is_available = TRUE THEN 1 ELSE 0 END) AS available_seats,
     SUM(CASE WHEN tsi.is_available = FALSE THEN 1 ELSE 0 END) AS reserved_seats,
     ROUND(
         (SUM(CASE WHEN tsi.is_available = FALSE THEN 1 ELSE 0 END) * 100.0) / 
         NULLIF(COUNT(tsi.inventory_id), 0), 2
-    ) AS occupancy_percentage
+    ) AS occupancy_percentage,
+    ROUND(
+        (SUM(CASE WHEN tsi.is_available = FALSE THEN 1 ELSE 0 END) * 100.0) / 
+        NULLIF(COUNT(tsi.inventory_id), 0), 2
+    ) AS occupancy_pct
 FROM trips tr
 JOIN services s ON tr.service_id = s.service_id
 JOIN routes r ON tr.route_id = r.route_id
 JOIN trip_seat_inventory tsi ON tr.trip_id = tsi.trip_id
 JOIN seats st ON tsi.seat_id = st.seat_id
 GROUP BY 
-    tr.trip_id, tr.trip_date, tr.status,
+    tr.trip_id, tr.trip_date, tr.scheduled_departure, tr.status,
     s.service_number, s.service_name,
     r.route_code, r.route_name,
     st.seat_class;
@@ -111,10 +117,14 @@ SELECT
     COUNT(DISTINCT tr.trip_id) AS total_trips_scheduled,
     SUM(CASE WHEN tr.status = 'COMPLETED' THEN 1 ELSE 0 END) AS trips_completed,
     SUM(CASE WHEN tr.status = 'CANCELLED' THEN 1 ELSE 0 END) AS trips_cancelled,
+    SUM(CASE WHEN tr.status = 'DELAYED' THEN 1 ELSE 0 END) AS delayed_trips_count,
     COALESCE(ROUND(AVG(d.delay_minutes), 1), 0.0) AS avg_delay_minutes,
     COUNT(DISTINCT t.ticket_id) AS total_tickets_sold,
+    COUNT(DISTINCT t.passenger_id) AS total_passengers_booked,
     COALESCE(SUM(t.fare_amount), 0.00) AS total_gross_revenue,
+    COALESCE(SUM(t.fare_amount), 0.00) AS gross_revenue,
     COALESCE(SUM(c.refund_amount), 0.00) AS total_refunds_issued,
+    COALESCE(SUM(c.refund_amount), 0.00) AS total_refunds,
     COALESCE(SUM(t.fare_amount) - SUM(COALESCE(c.refund_amount, 0.00)), 0.00) AS net_revenue
 FROM routes r
 JOIN stations st_orig ON r.origin_station_id = st_orig.station_id
@@ -135,16 +145,22 @@ GROUP BY
 CREATE OR REPLACE VIEW v_monthly_revenue AS
 SELECT 
     DATE_FORMAT(b.booking_date, '%Y-%m') AS booking_month,
+    DATE_FORMAT(b.booking_date, '%Y-%m') AS revenue_month,
     r.route_id,
     r.route_code,
     r.route_name,
     s.service_type,
     COUNT(DISTINCT b.booking_id) AS total_bookings_count,
+    COUNT(DISTINCT b.booking_id) AS total_bookings,
     COUNT(DISTINCT t.ticket_id) AS total_tickets_issued,
+    COUNT(DISTINCT CASE WHEN t.ticket_status <> 'CANCELLED' THEN t.ticket_id END) AS confirmed_tickets,
     COALESCE(SUM(b.total_fare), 0.00) AS gross_booking_amount,
+    COALESCE(SUM(b.total_fare), 0.00) AS total_collected_amount,
     COALESCE(SUM(c.cancellation_fee), 0.00) AS total_cancellation_fees,
     COALESCE(SUM(c.refund_amount), 0.00) AS total_refund_amount,
-    COALESCE(SUM(b.total_fare) - SUM(COALESCE(c.refund_amount, 0.00)), 0.00) AS net_revenue
+    COALESCE(SUM(c.refund_amount), 0.00) AS total_refunds,
+    COALESCE(SUM(b.total_fare) - SUM(COALESCE(c.refund_amount, 0.00)), 0.00) AS net_revenue,
+    COALESCE(SUM(b.total_fare) - SUM(COALESCE(c.refund_amount, 0.00)), 0.00) AS net_monthly_revenue
 FROM bookings b
 JOIN trips tr ON b.trip_id = tr.trip_id
 JOIN routes r ON tr.route_id = r.route_id
@@ -212,4 +228,3 @@ JOIN services s ON tr.service_id = s.service_id
 JOIN stations st_orig ON t.origin_station_id = st_orig.station_id
 JOIN stations st_dest ON t.destination_station_id = st_dest.station_id
 LEFT JOIN seats st ON t.seat_id = st.seat_id;
-
