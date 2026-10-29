@@ -23,13 +23,17 @@ MODEL_DIR = settings.ML_MODELS_DIR
 MODEL_FILE = os.path.join(MODEL_DIR, f"demand_model_{settings.ML_MODEL_VERSION}.joblib")
 METRICS_FILE = os.path.join(MODEL_DIR, f"metrics_{settings.ML_MODEL_VERSION}.json")
 
+# Enriched feature set with temporal peak-hour indicators and seasonality
 FEATURE_COLS = [
     "route_id",
     "total_distance_km",
     "duration_est_minutes",
     "departure_hour",
+    "is_peak_hour",
     "day_of_week",
+    "day_of_month",
     "month_of_year",
+    "quarter_of_year",
     "is_weekend",
     "avg_base_fare",
     "cancellations_count",
@@ -58,6 +62,11 @@ DEFAULT_ROUTES = {
 }
 
 
+def compute_peak_hour_flag(hour: int) -> int:
+    """Returns 1 for rush hours (07:00-10:00 & 16:00-20:00), 0 otherwise."""
+    return 1 if (7 <= hour <= 10 or 16 <= hour <= 20) else 0
+
+
 class DemandForecaster:
 
     @staticmethod
@@ -78,7 +87,8 @@ class DemandForecaster:
             return pd.DataFrame(columns=[
                 "route_id", "route_code", "total_distance_km", "duration_est_minutes",
                 "trip_id", "service_id", "service_number", "service_type",
-                "trip_date", "departure_hour", "day_of_week", "month_of_year",
+                "trip_date", "departure_hour", "is_peak_hour", "day_of_week",
+                "day_of_month", "month_of_year", "quarter_of_year",
                 "is_weekend", "avg_base_fare", "trips_count", "booking_count",
                 "cancellations_count", "actual_passenger_demand"
             ])
@@ -88,8 +98,11 @@ class DemandForecaster:
         df["total_distance_km"] = df["total_distance_km"].astype(float)
         df["duration_est_minutes"] = df["duration_est_minutes"].astype(int)
         df["departure_hour"] = df["departure_hour"].fillna(8).astype(int)
+        df["is_peak_hour"] = df["departure_hour"].map(compute_peak_hour_flag).astype(int)
         df["day_of_week"] = df["day_of_week"].astype(int)
+        df["day_of_month"] = df["trip_date"].dt.day.astype(int)
         df["month_of_year"] = df["month_of_year"].astype(int)
+        df["quarter_of_year"] = df["trip_date"].dt.quarter.astype(int)
         df["is_weekend"] = df["is_weekend"].astype(int)
         df["avg_base_fare"] = df["avg_base_fare"].astype(float)
         df["cancellations_count"] = df["cancellations_count"].fillna(0).astype(int)
@@ -130,13 +143,16 @@ class DemandForecaster:
         for day in range(num_samples // len(routes) + 5):
             cur_date = base_date + pd.Timedelta(days=day)
             day_of_week = cur_date.isoweekday()
+            day_of_month = cur_date.day
             month = cur_date.month
+            quarter = cur_date.quarter
             is_weekend = 1 if day_of_week in [6, 7] else 0
             weekend_mult = 1.15 if is_weekend else 1.0
 
             for r in routes:
                 hour = int(np.random.choice([6, 8, 12, 16, 20]))
-                peak_mult = 1.2 if hour in [8, 16, 20] else 0.95
+                is_peak = compute_peak_hour_flag(hour)
+                peak_mult = 1.25 if is_peak else 0.95
                 noise = np.random.normal(0, 15)
 
                 demand = int(max(20, round(r["base_demand"] * weekend_mult * peak_mult + noise)))
@@ -153,8 +169,11 @@ class DemandForecaster:
                     "service_type": "EXPRESS",
                     "trip_date": cur_date,
                     "departure_hour": hour,
+                    "is_peak_hour": is_peak,
                     "day_of_week": day_of_week,
+                    "day_of_month": day_of_month,
                     "month_of_year": month,
+                    "quarter_of_year": quarter,
                     "is_weekend": is_weekend,
                     "avg_base_fare": r["base_fare"],
                     "trips_count": 1,
@@ -396,8 +415,11 @@ class DemandForecaster:
             raise ValueError(f"Route with ID {route_id} does not exist.")
 
         hour = departure_hour if departure_hour is not None else 8
+        is_peak = compute_peak_hour_flag(hour)
         day_of_week = target_date.isoweekday()
+        day_of_month = target_date.day
         month_of_year = target_date.month
+        quarter_of_year = (month_of_year - 1) // 3 + 1
         is_weekend = 1 if day_of_week in [6, 7] else 0
         dist_km = float(route["total_distance_km"])
         dur_min = int(route["duration_est_minutes"])
@@ -419,8 +441,11 @@ class DemandForecaster:
                 "total_distance_km": dist_km,
                 "duration_est_minutes": dur_min,
                 "departure_hour": hour,
+                "is_peak_hour": is_peak,
                 "day_of_week": day_of_week,
+                "day_of_month": day_of_month,
                 "month_of_year": month_of_year,
+                "quarter_of_year": quarter_of_year,
                 "is_weekend": is_weekend,
                 "avg_base_fare": est_fare,
                 "cancellations_count": max(0, int(round(route_hist_mean * 0.04))),
@@ -446,8 +471,11 @@ class DemandForecaster:
             "distance_km": dist_km,
             "duration_est_minutes": dur_min,
             "departure_hour": hour,
+            "is_peak_hour": is_peak,
             "day_of_week": day_of_week,
+            "day_of_month": day_of_month,
             "month_of_year": month_of_year,
+            "quarter_of_year": quarter_of_year,
             "is_weekend": is_weekend,
             "avg_base_fare": est_fare,
             "confidence_margin": margin,

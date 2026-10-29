@@ -20,7 +20,7 @@ from app.ml.demand_forecasting import DemandForecaster
 
 def generate_dataset(output_path: str, samples: int = 400, mode: str = "auto") -> pd.DataFrame:
     """
-    Generates or extracts passenger demand dataset.
+    Generates or extracts passenger demand dataset with temporal peak-hour indicators.
     modes:
       'live': Extracts strictly from MySQL via raw SQL
       'synthetic': Generates simulated dataset
@@ -38,7 +38,7 @@ def generate_dataset(output_path: str, samples: int = 400, mode: str = "auto") -
             print(f"          Live extraction skipped: {e}")
 
     if mode == "synthetic" or (mode == "auto" and len(df) < 20):
-        print("    [2/2] Generating realistic synthetic simulation dataset...")
+        print("    [2/2] Generating realistic synthetic simulation dataset with peak-hour tags...")
         df_synth = DemandForecaster.generate_synthetic_data(num_samples=samples)
         if len(df) > 0:
             df = pd.concat([df_synth, df], ignore_index=True)
@@ -62,6 +62,7 @@ def generate_dataset(output_path: str, samples: int = 400, mode: str = "auto") -
     print(f"  Date Range:             {df['trip_date'].min()} to {df['trip_date'].max()}")
     print(f"  Mean Passenger Demand:  {df['actual_passenger_demand'].mean():.2f}")
     print(f"  Min/Max Demand:         {df['actual_passenger_demand'].min()} / {df['actual_passenger_demand'].max()}")
+    print(f"  Peak Hour Trips:        {int(df['is_peak_hour'].sum()) if 'is_peak_hour' in df else 'N/A'}")
     print(f"  Is Simulated Data:      {bool(df.get('is_simulated', pd.Series([False])).any())}")
     print("=====================================================\n")
 

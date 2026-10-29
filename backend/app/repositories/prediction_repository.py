@@ -27,7 +27,6 @@ class PredictionRepository:
         """
         cursor = connection.cursor(dictionary=True)
         try:
-            # Use columns matching Person 1 schema with features_json extension
             query = """
                 INSERT INTO demand_predictions (
                     route_id, prediction_date, predicted_passenger_demand,
@@ -133,8 +132,14 @@ class PredictionRepository:
                     s.service_type,
                     tr.trip_date,
                     HOUR(tr.scheduled_departure) AS departure_hour,
+                    CASE 
+                        WHEN (HOUR(tr.scheduled_departure) BETWEEN 7 AND 10) OR (HOUR(tr.scheduled_departure) BETWEEN 16 AND 20) 
+                        THEN 1 ELSE 0 
+                    END AS is_peak_hour,
                     DAYOFWEEK(tr.trip_date) AS day_of_week,
+                    DAY(tr.trip_date) AS day_of_month,
                     MONTH(tr.trip_date) AS month_of_year,
+                    QUARTER(tr.trip_date) AS quarter_of_year,
                     CASE WHEN DAYOFWEEK(tr.trip_date) IN (1, 7) THEN 1 ELSE 0 END AS is_weekend,
                     tr.base_fare AS avg_base_fare,
                     COUNT(DISTINCT tr.trip_id) AS trips_count,
