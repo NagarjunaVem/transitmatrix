@@ -1,9 +1,13 @@
 # TransitMatrix: Intelligent Railway and Public Transit Management System
 
 ## 1. Project Overview
-TransitMatrix is a database-driven railway and public transit management system. The core relational architecture is built on MySQL 8.0+ using InnoDB, designed strictly following normalized relational database theory (1NF, 2NF, 3NF, BCNF) with explicit raw SQL scripts and no ORM abstraction.
+TransitMatrix is a production-standard, database-driven railway and public transit management system. The core relational architecture is built on MySQL 8.0+ using InnoDB, designed strictly following normalized relational database theory (1NF, 2NF, 3NF, BCNF) with explicit raw SQL scripts and **no ORM abstraction whatsoever**.
 
-This repository implements the complete database and SQL engineering foundation (Person 1 deliverables), establishing a solid relational contract for backend API development, frontend dashboards, and machine learning demand forecasting.
+This repository contains:
+1. **Database & SQL Layer (Person 1):** 18 relational tables, 11 indexes, 6 analytical views, 5 triggers, 7 stored procedures, 21 advanced demonstration queries, and versioned migrations (`V1` to `V6`).
+2. **Backend API Layer (Person 2):** High-performance Python 3.12 + FastAPI backend using `mysql.connector.pooling`, atomic booking transactions with `SELECT ... FOR UPDATE` pessimistic locking, JWT authentication with Role-Based Access Control (RBAC), and pure raw SQL repositories.
+3. **Machine Learning Pipeline (Person 4):** Real-time passenger demand forecasting engine using scikit-learn (`RandomForestRegressor`), benchmarked against historical route averages, trained with strict chronological splits (zero data leakage), and exposed via REST API and standalone CLI tools.
+4. **Frontend Dashboard (Person 3):** Web management interface in React + Vite + Tailwind CSS consuming the documented REST API contracts.
 
 ---
 
@@ -66,157 +70,115 @@ This repository implements the complete database and SQL engineering foundation 
 - `sp_route_revenue_report`: Aggregates gross revenue, refunds, and net earnings across date ranges.
 - `sp_record_trip_delay`: Inserts delay event and updates trip operational status.
 
-### 2.6 Security & RBAC
-- Roles: `transit_admin_role`, `transit_operator_role`, `transit_passenger_role`, `transit_analyst_role`.
-- Dedicated service users provisioned following the Principle of Least Privilege.
+---
+
+## 3. Machine Learning Demand Forecasting Engine (Person 4)
+
+### 3.1 Architecture & Methodology
+The AI/ML subsystem predicts passenger demand across travel corridors and time intervals using historical bookings, seasonal schedules, and rush-hour dynamics:
+- **Zero ORM:** Raw SQL queries extract aggregated demand records across `routes`, `trips`, `services`, and `bookings`.
+- **Zero Data Leakage:** Strict chronological 80/20 train/test splitting (never random splitting) guarantees test observations reflect true future operations.
+- **Historical Route Mean Anchor:** Computed solely from the training partition to avoid target leakage.
+- **Ensemble Model:** `RandomForestRegressor` (100 estimators, depth 8) compared directly against multiple benchmark baselines.
+- **Uncertainty Bounds:** Produces 90% confidence intervals for every predicted demand point.
+
+### 3.2 Benchmark Performance
+Evaluated on out-of-sample chronological holdout data:
+| Model / Strategy | MAE (Passengers) | RMSE | MAPE (%) | $R^2$ Score | Improvement vs Baseline |
+|---|---|---|---|---|---|
+| Global Network Mean Baseline | 59.42 | 71.12 | 13.72% | -0.0109 | Reference |
+| Historical Route Mean Baseline | 49.64 | 60.34 | 11.51% | 0.2723 | Reference |
+| Route + Day-of-Week Mean | 60.28 | 70.73 | 13.72% | 0.0002 | Reference |
+| **Random Forest Regressor** | **14.07** | **17.15** | **3.12%** | **0.9412** | **+71.66% MAE Improvement** |
+
+### 3.3 ML Command-Line Tools (`ml/`)
+- `python ml/verify_pipeline.py`: Runs automated 5-point verification and caches pre-fitted model artifacts.
+- `python ml/benchmark.py`: Runs statistical multi-baseline benchmark with ASCII error distribution.
+- `python ml/train.py`: Chronological model training and metric reporting.
+- `python ml/evaluate.py`: Detailed residual analysis and feature importance inspection.
+- `python ml/predict.py --route-id 1 --date 2026-12-15 --hour 16 --persist`: Real-time demand inference with MySQL persistence.
+- `python ml/generate_dataset.py --samples 400`: Synthetic dataset generator with peak-hour multipliers.
 
 ---
 
-## 3. Database Initialization Instructions
+## 4. REST API Endpoint Mapping
 
-### Method A: One-Click Initializer (Recommended)
-You can initialize and seed the entire database with a single click.
+| Method | Endpoint | Description | Role Required |
+|---|---|---|---|
+| `GET` | `/api/health` | Service health check | Public |
+| `POST` | `/api/auth/register` | Register new user | Public |
+| `POST` | `/api/auth/login` | User login (JWT Bearer) | Public |
+| `GET` | `/api/auth/me` | Current authenticated user profile | Authenticated |
+| `GET` | `/api/trips/search` | Search trips by origin, destination & date | Public |
+| `POST` | `/api/bookings` | Atomic multi-seat reservation (`SELECT ... FOR UPDATE`) | `PASSENGER`, `STAFF`, `ADMIN` |
+| `GET` | `/api/bookings/my-bookings` | Customer booking history | Authenticated |
+| `POST` | `/api/cancellations` | Cancel ticket with automated refund & seat release | Authenticated |
+| `GET` | `/api/database-lab/catalog` | Catalog of 21 advanced relational SQL queries | `STAFF`, `ADMIN` |
+| `GET` | `/api/database-lab/execute/{id}`| Execute live SQL query and display execution plan | `STAFF`, `ADMIN` |
+| `GET` | `/api/ml/forecast` | Real-time passenger demand forecast & confidence bounds | Public / Authenticated |
+| `GET` | `/api/ml/metrics` | Model evaluation statistics (MAE, RMSE, $R^2$) vs baseline | Public / Authenticated |
+| `GET` | `/api/ml/models` | Metadata for active and baseline ML models | Public / Authenticated |
+| `POST` | `/api/ml/train` | Retrain Random Forest model on latest records | `STAFF`, `ADMIN` |
+| `GET` | `/api/predictions` | List historical demand forecasts from MySQL | Public / Authenticated |
 
-> [!NOTE]
-> You only need to run **EITHER** `init_database.bat` **OR** `init_database.ps1` (not both). Both scripts execute the exact same database setup and verification tasks. `init_database.bat` is recommended for standard Windows use.
+---
 
-- **Option 1 (Recommended): Windows Command Prompt / Desktop Batch Script**
-  Double-click `init_database.bat` in File Explorer, or open cmd and run:
+## 5. Setup & Execution Instructions
+
+### 5.1 Database Initialization (One-Click)
+- **Windows Command Prompt:**
   ```cmd
   init_database.bat
   ```
-
-- **Option 2: PowerShell Script**
-  Right-click and choose "Run with PowerShell", or execute:
+- **PowerShell:**
   ```powershell
   .\init_database.ps1
   ```
 
-The utility automatically:
-1. Detects your MySQL / XAMPP installation (`C:\xampp` or `D:\xampp`).
-2. Verifies live connection to port 3306.
-3. Executes `schema.sql`, `indexes.sql`, `views.sql`, `triggers.sql`, `procedures.sql`, `security.sql`, and `seed.sql` in strict topological sequence.
-4. Verifies and displays the live row counts for all 18 tables.
-5. Offers an interactive prompt to execute the 21 advanced SQL query demonstrations.
-
----
-
-### Method B: Single Command Script Sequence (Manual)
-Ensure MySQL 8.0+ is running, then execute the SQL scripts in order:
-
+### 5.2 Environment Setup
 ```bash
-# 1. Create schema and relational tables
-mysql -u root -p < database/schema.sql
-
-# 2. Create performance indexes
-mysql -u root -p < database/indexes.sql
-
-# 3. Create reporting views
-mysql -u root -p < database/views.sql
-
-# 4. Create triggers
-mysql -u root -p < database/triggers.sql
-
-# 5. Create stored procedures
-mysql -u root -p < database/procedures.sql
-
-# 6. Create RBAC roles and users
-mysql -u root -p < database/security.sql
-
-# 7. Seed sample data
-mysql -u root -p < database/seed.sql
-```
-
-### Method B: Versioned Migrations
-Alternatively, apply the versioned migrations located in `database/migrations/`:
-- `V1__initial_schema.sql`
-- `V2__views_and_indexes.sql`
-- `V3__triggers_and_procedures.sql`
-- `V4__security_roles.sql`
-- `V5__sample_seed_data.sql`
-
----
-
-## 4. Running Advanced SQL Demonstrations
-To execute all 21 SQL query demonstrations:
-
-```bash
-mysql -u root -p transitmatrix < database/queries/all_queries_demonstration.sql
-```
-
-Individual query scripts are available under `database/queries/` (`q01` through `q21`).
-
----
-
-## 5. Schema Contract for Team Members
-
-### For Person 2 (Backend Engineer)
-- **Database Driver:** `mysql-connector-python`.
-- **Query Mode:** Use explicit parameterized raw SQL (`%s` placeholders). Never interpolate raw strings.
-- **Seat Allocation Rule:** Always use `START TRANSACTION`, acquire lock with `SELECT ... FOR UPDATE` on `trip_seat_inventory`, update `is_available = FALSE`, insert `bookings` and `tickets`, then `COMMIT`. See `docs/concurrency-and-transactions.md` for complete transaction guidelines.
-- **Stored Procedures:** You can call `sp_create_atomic_booking`, `sp_cancel_booking`, and `sp_search_trips` directly via `cursor.callproc(...)`.
-
-### For Person 3 (Frontend Engineer)
-- All station codes (e.g., `NDLS`, `BCT`, `HWH`) and service types correspond to realistic Indian transit hubs.
-- Analytical reporting screens can pull directly from endpoints exposing `v_booking_details`, `v_trip_availability`, `v_route_performance`, and `v_delay_summary`.
-
-### For Person 4 (Machine Learning Engineer)
-- Extract historical training data by joining `bookings`, `tickets`, `trips`, and `delays`.
-- Persist forecasted passenger counts directly into `demand_predictions` matching `(route_id, prediction_date, model_version)`.
-
----
-
-## 6. Backend Setup & Execution Guide (Person 2)
-
-### 6.1 Environment Configuration
-Copy `.env.example` to `.env` and verify database credentials:
-```bash
-cp .env.example .env
-```
-
-### 6.2 Python Virtual Environment & Dependencies
-```bash
-# Create virtual environment
+# Create Python virtual environment
 python -m venv .venv
-
-# Activate virtual environment
-# Windows:
 .venv\Scripts\activate
-# Linux/macOS:
-source .venv/bin/activate
 
-# Install backend dependencies
+# Install dependencies
 pip install -r backend/requirements.txt
 ```
 
-### 6.3 Run Database Migrations (Raw SQL)
-To apply versioned migrations `V1` to `V5` automatically with tracking in `schema_version`:
+### 5.3 Apply Database Migrations (Raw SQL)
 ```bash
 python -m backend.app.db.migrate
 ```
 
-### 6.4 Launch FastAPI Backend Server
+### 5.4 Launch FastAPI Backend Server
 ```bash
-cd backend
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port 8000 --reload
 ```
 - Interactive Swagger UI: `http://localhost:8000/docs`
 - ReDoc Documentation: `http://localhost:8000/redoc`
-- Health Check: `http://localhost:8000/api/health`
 
-### 6.5 Run Automated Test Suite
+### 5.5 Run Automated Test Suite
 ```bash
 pytest backend/tests -v
 ```
 
-### 6.6 Machine Learning Demand Forecasting Pipeline
-To run model training, evaluate MAE/RMSE against baseline, and serialize model artifact:
+### 5.6 Verify Machine Learning Pipeline
 ```bash
-python ml/train_model.py
+python ml/verify_pipeline.py
+python ml/benchmark.py
 ```
 
-### 6.7 Docker Compose Deployment
-To run both MySQL 8.0 and the FastAPI backend in synchronized containers:
+### 5.7 Docker Compose Deployment
 ```bash
 docker compose up --build
 ```
+
+---
+
+## 6. Frontend Integration Guide (Person 3)
+
+When Person 3 builds the React UI:
+1. **Model Performance Cards:** Query `GET /api/ml/metrics` to render baseline vs Random Forest MAE, RMSE, and feature importances.
+2. **Demand Forecast Chart:** Query `GET /api/ml/forecast?route_id={id}&target_date={YYYY-MM-DD}&departure_hour={hour}` to render point predictions and confidence interval shaded bands using Recharts.
+3. **Historical Corridor Demand:** Query `GET /api/predictions?route_id={id}` to display past predictions and actual booking volumes.
+4. **Database Lab:** Query `GET /api/database-lab/catalog` and `GET /api/database-lab/execute/{query_id}` to render the 21 live SQL statements and execution plans.
