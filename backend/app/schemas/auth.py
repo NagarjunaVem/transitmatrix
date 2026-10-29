@@ -42,3 +42,7 @@ class UserProfileResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Alias for backward-compatibility with schemas package
+UserResponse = UserProfileResponse

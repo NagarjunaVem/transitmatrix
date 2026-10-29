@@ -26,3 +26,5 @@ class DelayResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+from app.schemas.report import DelaySummaryReportItem

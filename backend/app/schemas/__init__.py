@@ -2,44 +2,59 @@
 from app.schemas.auth import (
     UserRegisterRequest,
     UserLoginRequest,
-    UserResponse,
     TokenResponse,
+    UserProfileResponse,
+    UserResponse,
 )
 from app.schemas.station import (
-    StationCreateRequest,
-    StationUpdateRequest,
+    StationBase,
+    StationCreate,
+    StationUpdate,
     StationResponse,
 )
 from app.schemas.route import (
-    RouteCreateRequest,
-    RouteStopCreateRequest,
-    RouteResponse,
+    RouteStopBase,
+    RouteStopCreate,
     RouteStopResponse,
+    RouteBase,
+    RouteCreate,
+    RouteResponse,
+    RouteDetailResponse,
 )
 from app.schemas.service import (
-    ServiceCreateRequest,
+    ServiceBase,
+    ServiceCreate,
+    ServiceUpdate,
     ServiceResponse,
 )
 from app.schemas.vehicle import (
-    VehicleCreateRequest,
+    SeatResponse,
+    VehicleBase,
+    VehicleCreate,
+    VehicleUpdate,
     VehicleResponse,
 )
 from app.schemas.trip import (
-    TripCreateRequest,
+    TripBase,
+    TripCreate,
+    TripUpdate,
     TripResponse,
-    TripSearchItem,
+    TripSearchResultResponse,
 )
 from app.schemas.passenger import (
-    PassengerCreateRequest,
+    PassengerBase,
+    PassengerCreate,
     PassengerResponse,
 )
 from app.schemas.booking import (
+    BookingPassengerItem,
     BookingCreateRequest,
-    BookingResponse,
     TicketResponse,
+    BookingResponse,
     SeatMapItem,
 )
 from app.schemas.payment import (
+    PaymentCreateRequest,
     PaymentResponse,
 )
 from app.schemas.cancellation import (
@@ -58,7 +73,7 @@ from app.schemas.report import (
 )
 from app.schemas.db_lab import (
     QueryCatalogItem,
-    QueryExecutionResult,
+    QueryExecutionResponse,
 )
 from app.schemas.prediction import (
     PredictionCreateRequest,
@@ -71,4 +86,5 @@ from app.schemas.prediction import (
 from app.schemas.waitlist import (
     WaitlistCreateRequest,
     WaitlistResponse,
+    WaitlistPromotionResponse,
 )

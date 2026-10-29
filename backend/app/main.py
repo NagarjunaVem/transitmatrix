@@ -1,6 +1,14 @@
 # TransitMatrix - FastAPI Application Entry Point
 # Intelligent Railway and Public Transit Management System (Raw SQL Only)
 
+import os
+import sys
+
+# Ensure backend directory is in sys.path regardless of working directory
+_backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
