@@ -2,7 +2,7 @@
   "status": "success",
   "model_name": "RandomForestRegressor",
   "model_version": "v1.0",
-  "trained_at": "2026-10-29T12:24:34.853520",
+  "trained_at": "2026-10-29T12:30:34.664193",
   "artifact_path": "./ml/models\\demand_model_v1.0.joblib",
   "metrics": {
     "baseline_mae": 49.64,
