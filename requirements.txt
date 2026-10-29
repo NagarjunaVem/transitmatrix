@@ -1,0 +1,29 @@
+# TransitMatrix: Complete Project Dependencies
+# Compatible with Python 3.12+ and Python 3.13+
+
+# --- FastAPI Web Framework & ASGI Server ---
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+
+# --- Pydantic Data Validation & Configuration ---
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
+
+# --- Raw MySQL Database Driver (Strict Zero-ORM) ---
+mysql-connector-python>=8.3.0
+
+# --- Authentication, Security & Password Hashing ---
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.0.1
+python-jose[cryptography]>=3.3.0
+python-multipart>=0.0.9
+
+# --- Machine Learning & Data Science Pipeline (Person 4) ---
+pandas>=2.2.0
+numpy>=1.26.0
+scikit-learn>=1.4.0
+joblib>=1.3.0
+
+# --- Automated Testing & Test Client ---
+pytest>=8.0.0
+httpx>=0.27.0
