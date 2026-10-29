@@ -1,0 +1,402 @@
+# PERSON 1 PROMPT — TransitMatrix Database & SQL Engineer
+
+Act as a senior MySQL database architect. Implement the complete database layer for TransitMatrix, an Intelligent Railway and Public Transit Management System.
+
+## Technology constraints
+- MySQL 8.0+
+- InnoDB
+- Explicit SQL scripts only
+- No ORM, SQLAlchemy, Prisma, or automatic schema generation
+- MySQL-compatible syntax throughout
+
+## Responsibilities
+
+### 1. Database design
+Design the ER/EER model and relational schema for:
+- Users and passengers
+- Stations, routes, route stops
+- Services, vehicles, trips
+- Seats and trip-specific seat inventory
+- Bookings, tickets, payments, cancellations
+- Waitlists, delays, audit logs
+- Demand predictions
+
+Define all primary keys, candidate keys, foreign keys, unique constraints, check constraints, defaults, and referential actions.
+
+Create `docs/er-diagram.md`, `docs/relational-schema.md`, `docs/functional-dependencies.md`, and `docs/normalization.md`. Demonstrate 1NF, 2NF, 3NF, and BCNF where applicable, including anomalies and lossless decomposition.
+
+### 2. SQL implementation
+Create:
+- `database/schema.sql`
+- `database/seed.sql`
+- `database/views.sql`
+- `database/indexes.sql`
+- `database/triggers.sql`
+- `database/procedures.sql`
+- `database/security.sql`
+- `database/migrations/`
+- `database/queries/`
+
+Write at least 20 meaningful SQL demonstrations covering joins, nested and correlated subqueries, EXISTS, aggregates, GROUP BY, HAVING, CTEs, window functions, views, indexes, and transactions.
+
+### 3. Sample data
+Seed realistic, referentially valid data containing at least:
+- 30 stations
+- 15 routes
+- 20 services
+- 100 trips
+- 200 passengers
+- 500 bookings
+- Related tickets, inventory, payments, cancellations, and delay records
+
+Make the seed process reproducible and safe for a fresh development database.
+
+### 4. Views, indexes, triggers and procedures
+Implement reporting views, query-driven indexes, audit triggers, and useful stored procedures for availability lookup, revenue reporting, and cancellation where appropriate.
+
+Document the purpose of each object and provide SQL examples to demonstrate it.
+
+### 5. Concurrency and integrity
+Design database constraints to prevent duplicate seat allocation. Define the inventory schema and booking invariants that Person 2 must follow.
+
+Provide SQL examples demonstrating transaction rollback, row locking, and isolation. Coordinate the schema contract with Person 2 before finalizing the booking-related tables.
+
+### 6. Deliverables and acceptance criteria
+- All SQL executes successfully on MySQL 8.0+.
+- Every relationship is enforced by foreign keys where appropriate.
+- Seed data contains no broken references.
+- Views, indexes, triggers, and procedures work against the implemented schema.
+- SQL demonstrations use actual tables and return meaningful results.
+- Document the exact commands needed to initialize the database.
+- Commit only your assigned files and provide a list of database objects created.
+
+Do not implement the frontend, FastAPI endpoints, or ML model. Establish a stable schema contract for the other three team members.
+
+Start by inspecting the repository, then implement and test the database layer completely.
+
+# PERSON 2 PROMPT — TransitMatrix Backend Engineer
+
+Act as a senior Python backend engineer. Build the FastAPI backend for TransitMatrix using explicit MySQL SQL statements and integrate it with Person 1's database schema.
+
+## Technology constraints
+- Python 3.12
+- FastAPI
+- mysql-connector-python
+- Pydantic
+- Password hashing using Argon2 or bcrypt
+- pytest
+- No ORM of any kind
+- No SQLAlchemy ORM or Core
+
+Use `mysql.connector.pooling.MySQLConnectionPool` for connection management. All database operations must use parameterized SQL or documented stored procedure calls.
+
+## Architecture
+
+Implement:
+
+`FastAPI Router → Service → Repository → mysql.connector → MySQL`
+
+Use a clean structure:
+
+- `backend/app/core/`
+- `backend/app/db/`
+- `backend/app/repositories/`
+- `backend/app/services/`
+- `backend/app/schemas/`
+- `backend/app/api/routes/`
+- `backend/tests/`
+
+Keep HTTP handlers thin, business logic in services, and SQL statements in repositories.
+
+## Responsibilities
+
+### 1. Database connectivity
+- Load configuration from environment variables.
+- Create and manage a MySQL connection pool.
+- Close cursors and return connections safely.
+- Implement transaction helpers and consistent error handling.
+- Never hardcode credentials.
+- Never concatenate untrusted values into SQL.
+
+### 2. API implementation
+Create REST endpoints for:
+- Registration, login, logout, and current-user information.
+- Station and route CRUD.
+- Service, vehicle, and trip management.
+- Trip search by origin, destination, date, and transport type.
+- Seat availability.
+- Booking creation, retrieval, and cancellation.
+- Payment simulation and payment history.
+- Revenue, occupancy, cancellation, and delay reports.
+- Database demonstration queries.
+- ML prediction endpoints, coordinated with Person 4.
+
+Use Pydantic for input validation and response serialization, not database mapping.
+
+### 3. Transactional booking
+Implement a complete transaction that:
+1. Validates the passenger and trip.
+2. Locks the relevant inventory row using `SELECT ... FOR UPDATE`.
+3. Checks availability.
+4. Creates booking and ticket records.
+5. Updates inventory.
+6. Records the appropriate payment state.
+7. Commits only when all required operations succeed.
+8. Rolls back on any failure.
+
+Prevent duplicate reservations through database constraints and transactional checks. Handle concurrent requests, deadlocks, and reservation expiry appropriately.
+
+Coordinate exact table and column names with Person 1.
+
+### 4. Authentication and authorization
+Implement role-based access for:
+- Administrator
+- Operator
+- Passenger
+- Analyst
+
+Enforce permissions in backend endpoints. Passengers must not access other passengers' private bookings. Protect secrets, validate tokens or sessions, and use least-privilege database credentials.
+
+### 5. Testing
+Test:
+- CRUD operations
+- Authentication and authorization
+- Input validation
+- Booking success and failure
+- Rollback
+- Concurrent booking attempts using independent connections
+- Cancellation and inventory restoration
+- Report correctness
+- Error handling
+
+Use a dedicated MySQL test database.
+
+### 6. Deliverables
+Provide:
+- Complete FastAPI backend.
+- `requirements.txt`.
+- `.env.example` updates.
+- API documentation through Swagger UI.
+- Automated tests.
+- Setup instructions in the README.
+- A list of endpoints and their corresponding SQL operations.
+
+Do not implement React UI or train the ML model. Provide stable API contracts for Person 3 and coordinate prediction endpoints with Person 4.
+
+Start by inspecting the repository and the database schema supplied by Person 1. Implement, run, debug, and test the backend rather than only generating code snippets.
+
+# PERSON 3 PROMPT — TransitMatrix Frontend Engineer
+
+Act as a senior React frontend engineer. Build the complete web interface for TransitMatrix and integrate it with Person 2's FastAPI backend.
+
+## Technology constraints
+- React
+- Vite
+- JavaScript, not TypeScript
+- Tailwind CSS
+- React Router
+- TanStack Query
+- Axios
+- Recharts
+
+Do not implement a mock-only interface. All core screens must consume real backend APIs.
+
+## Responsibilities
+
+### 1. Application foundation
+Build:
+- Shared layouts and navigation
+- Responsive dashboard
+- Reusable forms, tables, dialogs, and pagination
+- API client and centralized error handling
+- Authentication state and protected routes
+- Role-aware navigation
+
+Use TanStack Query for server state and Axios for HTTP requests.
+
+### 2. Required pages
+
+**Dashboard**
+- Booking counts
+- Active trips
+- Revenue
+- Cancellation statistics
+- Delay analytics
+- Occupancy charts
+
+**Station and route management**
+- Search, insert, update, and delete records
+- Route-stop sequence visualization
+- Station and route details
+
+**Services and timetables**
+- Manage services and trips
+- Search by origin, destination, date, and service type
+- Display schedules and availability
+
+**Passenger booking**
+- Search trips
+- Display seat availability
+- Book seats
+- View booking history and ticket details
+- Cancel eligible bookings
+- Display payment status
+
+**Reports**
+- Revenue by route and month
+- Booking and cancellation analysis
+- Occupancy reports
+- Delay summaries
+- Export authorized report results to CSV
+
+**Database Lab**
+- Display the ER diagram.
+- Explain the relational schema and keys.
+- Show functional dependencies and normalization.
+- List at least 20 predefined SQL demonstrations.
+- Display the actual SQL statement associated with each demonstration.
+- Execute demonstrations through authorized backend endpoints.
+- Render actual database results in tables.
+- Display measured execution duration and row count when available.
+- Explain indexes, views, triggers, procedures, and transaction examples.
+
+**AI/ML dashboard**
+Coordinate with Person 4 to display historical demand, predictions, model metrics, and forecast charts.
+
+### 3. Integration rules
+- Use Person 2's documented API contracts.
+- Never connect directly from the browser to MySQL.
+- Never place database credentials in frontend code.
+- Never invent successful API results or use hardcoded data as production results.
+- Handle loading, empty, validation, and error states.
+- Require confirmation for destructive operations.
+- Enforce authorization in the backend; frontend route protection is supplementary.
+
+### 4. Design expectations
+Create a professional transit-management interface with consistent typography, spacing, accessible contrast, responsive layouts, clear tables, and useful charts.
+
+Prioritize functional database workflows over decorative animation.
+
+### 5. Deliverables
+- Complete frontend source code.
+- API integration layer.
+- All required pages and navigation.
+- Responsive UI and reusable components.
+- Build and integration verification.
+- Frontend setup instructions.
+- Screenshots for project documentation where feasible.
+
+Do not change database schemas or implement backend business logic. Coordinate the Database Lab with Person 1 and API contracts with Person 2.
+
+Start by inspecting the existing repository and API documentation. Implement the actual working UI and verify that its build succeeds.
+
+# PERSON 4 PROMPT — TransitMatrix AI/ML Engineer
+
+Act as a machine learning engineer responsible for implementing a real passenger-demand forecasting pipeline and integrating it with TransitMatrix.
+
+## Technology constraints
+- Python 3.12
+- pandas
+- NumPy
+- scikit-learn
+- mysql-connector-python
+- FastAPI integration coordinated with Person 2
+- React dashboard integration coordinated with Person 3
+- No ORM
+
+All database extraction and persistence must use explicit parameterized MySQL SQL statements.
+
+## Objective
+Predict passenger demand for a service, route, and time interval using historical booking and trip records. The feature should help identify expected demand and possible capacity pressure.
+
+## Responsibilities
+
+### 1. Data extraction
+Use MySQL queries to extract:
+- Historical booking counts
+- Service and route identifiers
+- Departure dates and hours
+- Day of week and month
+- Cancellation information where relevant
+- Historical demand by time interval
+
+Coordinate with Person 1 to ensure the necessary tables and historical data exist.
+
+If real data is unavailable, generate realistic synthetic historical data and clearly label it as simulated.
+
+### 2. Data preprocessing
+- Validate timestamps and numeric values.
+- Handle missing or invalid data.
+- Define a consistent prediction target.
+- Create time-based and categorical features.
+- Build lagged features only when historical information would be available at prediction time.
+- Prevent target leakage.
+- Use reproducible preprocessing.
+
+### 3. Modeling
+Implement:
+1. A historical-average or other appropriate baseline.
+2. A Random Forest Regressor.
+3. Chronological training, validation, and testing.
+4. MAE and RMSE evaluation.
+5. R² where appropriate.
+6. A comparison against the baseline.
+
+Do not use a random train/test split if it would leak future information into training.
+
+Do not fabricate metrics or claim that the model outperforms the baseline unless the evaluation proves it.
+
+### 4. Model artifacts
+Create:
+- `ml/generate_dataset.py`
+- `ml/train.py`
+- `ml/evaluate.py`
+- `ml/predict.py`
+- `ml/README.md`
+
+Save the fitted model and preprocessing pipeline. Record the model version, training timestamp, feature definitions, dataset provenance, and evaluation metrics.
+
+Ensure model artifacts are reproducible and excluded from Git when large or generated, unless the team explicitly chooses to version a small demonstration artifact.
+
+### 5. Backend integration
+Coordinate with Person 2 to expose endpoints such as:
+- `GET /api/ml/forecast`
+- `GET /api/ml/metrics`
+- `GET /api/ml/models`
+
+Implement prediction logic that:
+- Accepts validated route, service, and time inputs.
+- Extracts or receives valid features.
+- Loads the trained model.
+- Returns predicted demand and model metadata.
+- Persists predictions and relevant metadata in MySQL where appropriate.
+- Handles insufficient historical data gracefully.
+
+Do not create a second FastAPI application if Person 2 already owns the main backend. Provide a router or service module for integration.
+
+### 6. Frontend integration
+Coordinate with Person 3 to provide:
+- Historical-versus-predicted demand charts
+- Route or service filters
+- Forecast period selection
+- MAE and RMSE metrics
+- Model version and training date
+- Clear labeling of forecasts versus observed values
+
+### 7. Testing and deliverables
+Test:
+- SQL data extraction
+- Feature generation
+- Leakage prevention
+- Reproducible training
+- Metric calculations
+- Prediction input validation
+- Insufficient-data behavior
+- Model loading and persistence
+- Prediction endpoint integration
+
+Deliver the complete training pipeline, evaluation report, model integration, documentation, and reproducible commands.
+
+Do not modify the core database schema without coordinating with Person 1. Do not build the main frontend or duplicate Person 2's backend.
+
+Start by inspecting the database schema and repository. Implement the full ML workflow and verify the results using actual evaluation data.
