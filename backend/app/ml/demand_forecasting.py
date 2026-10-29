@@ -16,8 +16,6 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import joblib
 
 from app.core.config import settings
-from app.db.connection import get_db_connection
-from app.repositories.prediction_repository import PredictionRepository
 
 logger = logging.getLogger("transitmatrix.ml")
 
@@ -38,6 +36,27 @@ FEATURE_COLS = [
     "route_hist_mean",
 ]
 
+DEFAULT_ROUTES = {
+    1: {"route_id": 1, "route_code": "NDLS-BCT", "route_name": "New Delhi to Mumbai Central", "total_distance_km": 1384.0, "duration_est_minutes": 950},
+    2: {"route_id": 2, "route_code": "BCT-NDLS", "route_name": "Mumbai Central to New Delhi", "total_distance_km": 1384.0, "duration_est_minutes": 950},
+    3: {"route_id": 3, "route_code": "NDLS-HWH", "route_name": "New Delhi to Howrah", "total_distance_km": 1447.0, "duration_est_minutes": 1020},
+    4: {"route_id": 4, "route_code": "HWH-NDLS", "route_name": "Howrah to New Delhi", "total_distance_km": 1447.0, "duration_est_minutes": 1020},
+    5: {"route_id": 5, "route_code": "NDLS-MAS", "route_name": "New Delhi to Chennai Central", "total_distance_km": 2180.0, "duration_est_minutes": 1710},
+    6: {"route_id": 6, "route_code": "MAS-NDLS", "route_name": "Chennai Central to New Delhi", "total_distance_km": 2180.0, "duration_est_minutes": 1710},
+    7: {"route_id": 7, "route_code": "BCT-ADI", "route_name": "Mumbai Central to Ahmedabad", "total_distance_km": 492.0, "duration_est_minutes": 380},
+    8: {"route_id": 8, "route_code": "ADI-BCT", "route_name": "Ahmedabad to Mumbai Central", "total_distance_km": 492.0, "duration_est_minutes": 380},
+    9: {"route_id": 9, "route_code": "SBC-MAS", "route_name": "Bangalore to Chennai", "total_distance_km": 358.0, "duration_est_minutes": 260},
+    10: {"route_id": 10, "route_code": "MAS-SBC", "route_name": "Chennai to Bangalore", "total_distance_km": 358.0, "duration_est_minutes": 260},
+    11: {"route_id": 11, "route_code": "CSMT-PUNE", "route_name": "Mumbai CSMT to Pune", "total_distance_km": 192.0, "duration_est_minutes": 195},
+    12: {"route_id": 12, "route_code": "PUNE-CSMT", "route_name": "Pune to Mumbai CSMT", "total_distance_km": 192.0, "duration_est_minutes": 195},
+    13: {"route_id": 13, "route_code": "NDLS-CDG", "route_name": "New Delhi to Chandigarh", "total_distance_km": 244.0, "duration_est_minutes": 200},
+    14: {"route_id": 14, "route_code": "CDG-NDLS", "route_name": "Chandigarh to New Delhi", "total_distance_km": 244.0, "duration_est_minutes": 200},
+    15: {"route_id": 15, "route_code": "HYB-BZA", "route_name": "Hyderabad to Vijayawada", "total_distance_km": 313.0, "duration_est_minutes": 270},
+    16: {"route_id": 16, "route_code": "BZA-HYB", "route_name": "Vijayawada to Hyderabad", "total_distance_km": 313.0, "duration_est_minutes": 270},
+    17: {"route_id": 17, "route_code": "NDLS-BSB", "route_name": "New Delhi to Varanasi", "total_distance_km": 765.0, "duration_est_minutes": 480},
+    18: {"route_id": 18, "route_code": "BSB-NDLS", "route_name": "Varanasi to New Delhi", "total_distance_km": 765.0, "duration_est_minutes": 480},
+}
+
 
 class DemandForecaster:
 
@@ -46,12 +65,14 @@ class DemandForecaster:
         """
         Extracts historical trip and booking demand data directly via raw SQL without ORM.
         """
+        raw_data = []
         try:
+            from app.db.connection import get_db_connection
+            from app.repositories.prediction_repository import PredictionRepository
             with get_db_connection() as conn:
                 raw_data = PredictionRepository.get_historical_features(conn)
         except Exception as e:
-            logger.warning(f"Database feature extraction error or DB not ready: {e}")
-            raw_data = []
+            logger.warning(f"Database feature extraction unavailable or DB offline: {e}")
 
         if not raw_data:
             return pd.DataFrame(columns=[
@@ -85,7 +106,6 @@ class DemandForecaster:
         base_date = pd.Timestamp("2026-06-01")
         records = []
 
-        # 18 corridors with typical distances and durations
         routes = [
             {"route_id": 1, "route_code": "NDLS-BCT", "dist": 1384.0, "dur": 950, "base_fare": 2400.0, "base_demand": 380},
             {"route_id": 2, "route_code": "BCT-NDLS", "dist": 1384.0, "dur": 950, "base_fare": 2400.0, "base_demand": 375},
@@ -107,14 +127,11 @@ class DemandForecaster:
             {"route_id": 18, "route_code": "BSB-NDLS", "dist": 765.0, "dur": 480, "base_fare": 1650.0, "base_demand": 390},
         ]
 
-        # Generate chronological sequence
         for day in range(num_samples // len(routes) + 5):
             cur_date = base_date + pd.Timedelta(days=day)
-            day_of_week = cur_date.isoweekday()  # 1 (Mon) to 7 (Sun)
+            day_of_week = cur_date.isoweekday()
             month = cur_date.month
             is_weekend = 1 if day_of_week in [6, 7] else 0
-
-            # Weekend factor +15% demand
             weekend_mult = 1.15 if is_weekend else 1.0
 
             for r in routes:
@@ -161,12 +178,10 @@ class DemandForecaster:
         if train_split_idx is None:
             train_split_idx = int(len(df) * 0.8)
 
-        # Compute historical route mean using ONLY training observations
         train_df = df.iloc[:train_split_idx]
         route_means = train_df.groupby("route_id")["actual_passenger_demand"].mean().to_dict()
         overall_mean = float(train_df["actual_passenger_demand"].mean()) if len(train_df) > 0 else 50.0
 
-        # Map strictly using training stats (prevents target leakage)
         df["route_hist_mean"] = df["route_id"].map(lambda rid: route_means.get(rid, overall_mean)).astype(float)
 
         X = df[FEATURE_COLS]
@@ -187,7 +202,6 @@ class DemandForecaster:
         else:
             df = DemandForecaster.extract_training_data()
             if len(df) < 15:
-                # Merge DB samples with synthetic dataset to achieve stable training
                 logger.info(f"DB has only {len(df)} samples; augmenting with synthetic simulation data.")
                 df_synth = DemandForecaster.generate_synthetic_data(350)
                 df = pd.concat([df_synth, df], ignore_index=True) if len(df) > 0 else df_synth
@@ -195,10 +209,8 @@ class DemandForecaster:
             else:
                 provenance = "mysql_live_data"
 
-        # Chronological sort strictly by date and departure hour
         df = df.sort_values(by=["trip_date", "departure_hour"]).reset_index(drop=True)
 
-        # 80/20 Chronological train/test split
         split_idx = int(len(df) * 0.80)
         if split_idx == 0:
             split_idx = 1
@@ -208,9 +220,7 @@ class DemandForecaster:
         X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
         y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
 
-        # ---------------------------------------------------------
         # 1. Historical-Average Baseline Model
-        # ---------------------------------------------------------
         y_pred_baseline = X_test["route_hist_mean"].values
         baseline_mae = float(mean_absolute_error(y_test, y_pred_baseline))
         baseline_rmse = float(np.sqrt(mean_squared_error(y_test, y_pred_baseline)))
@@ -219,9 +229,7 @@ class DemandForecaster:
         except Exception:
             baseline_r2 = 0.0
 
-        # ---------------------------------------------------------
         # 2. Random Forest Regressor Model
-        # ---------------------------------------------------------
         model = RandomForestRegressor(
             n_estimators=100,
             max_depth=8,
@@ -239,14 +247,12 @@ class DemandForecaster:
         except Exception:
             rf_r2 = 0.0
 
-        # Feature importance
         importances = {col: round(float(imp), 4) for col, imp in zip(FEATURE_COLS, model.feature_importances_)}
         importances = dict(sorted(importances.items(), key=lambda x: x[1], reverse=True))
 
         mae_improvement = round(((baseline_mae - rf_mae) / baseline_mae) * 100, 2) if baseline_mae > 0 else 0.0
         rmse_improvement = round(((baseline_rmse - rf_rmse) / baseline_rmse) * 100, 2) if baseline_rmse > 0 else 0.0
 
-        # Save trained artifact and metadata
         os.makedirs(MODEL_DIR, exist_ok=True)
         trained_at_iso = datetime.now().isoformat()
 
@@ -276,7 +282,6 @@ class DemandForecaster:
 
         joblib.dump(artifact, MODEL_FILE)
 
-        # Write metrics JSON for quick API retrieval
         with open(METRICS_FILE, "w") as f:
             json.dump({
                 "status": "success",
@@ -327,7 +332,6 @@ class DemandForecaster:
             except Exception:
                 pass
 
-        # Trigger automatic initial training
         return DemandForecaster.train_and_evaluate()
 
     @staticmethod
@@ -376,11 +380,17 @@ class DemandForecaster:
         Loads fitted model, generates demand forecast with confidence intervals,
         and persists into MySQL demand_predictions using explicit raw SQL.
         """
-        # 1. Fetch route properties using raw SQL
         route = None
-        with get_db_connection() as conn:
+        try:
+            from app.db.connection import get_db_connection
             from app.repositories.route_repository import RouteRepository
-            route = RouteRepository.get_by_id(conn, route_id)
+            with get_db_connection() as conn:
+                route = RouteRepository.get_by_id(conn, route_id)
+        except Exception:
+            pass
+
+        if not route:
+            route = DEFAULT_ROUTES.get(route_id)
 
         if not route:
             raise ValueError(f"Route with ID {route_id} does not exist.")
@@ -393,9 +403,8 @@ class DemandForecaster:
         dur_min = int(route["duration_est_minutes"])
         est_fare = round(dist_km * 1.85, 2)
 
-        # 2. Ensure model is loaded or trained
         if not os.path.exists(MODEL_FILE):
-            DemandForecaster.train_and_evaluate()
+            DemandForecaster.train_and_evaluate(force_synthetic=True)
 
         if os.path.exists(MODEL_FILE):
             artifact = joblib.load(MODEL_FILE)
@@ -422,11 +431,9 @@ class DemandForecaster:
             pred_float = float(model.predict(X_input)[0])
             predicted_demand = max(10, int(round(pred_float)))
 
-            # Estimate standard error based on RF RMSE
             rmse = artifact.get("metrics", {}).get("rf_rmse", 25.0)
-            margin = max(8, int(round(rmse * 1.645)))  # ~90% confidence interval
+            margin = max(8, int(round(rmse * 1.645)))
         else:
-            # Fallback heuristic
             predicted_demand = max(30, int(round(dist_km * 0.35)))
             margin = max(5, int(round(predicted_demand * 0.15)))
 
@@ -447,25 +454,29 @@ class DemandForecaster:
             "model_used": "RandomForestRegressor"
         }
 
-        # 3. Persist prediction to MySQL using raw SQL
         if persist:
-            with get_db_connection() as conn:
-                PredictionRepository.save_prediction(
-                    connection=conn,
-                    route_id=route_id,
-                    prediction_date=target_date,
-                    predicted_demand=predicted_demand,
-                    confidence_interval_low=conf_low,
-                    confidence_interval_high=conf_high,
-                    model_version=settings.ML_MODEL_VERSION,
-                    model_name="RandomForestRegressor",
-                    features_json=features_meta
-                )
-                conn.commit()
+            try:
+                from app.db.connection import get_db_connection
+                from app.repositories.prediction_repository import PredictionRepository
+                with get_db_connection() as conn:
+                    PredictionRepository.save_prediction(
+                        connection=conn,
+                        route_id=route_id,
+                        prediction_date=target_date,
+                        predicted_demand=predicted_demand,
+                        confidence_interval_low=conf_low,
+                        confidence_interval_high=conf_high,
+                        model_version=settings.ML_MODEL_VERSION,
+                        model_name="RandomForestRegressor",
+                        features_json=features_meta
+                    )
+                    conn.commit()
 
-                records = PredictionRepository.get_predictions(conn, route_id=route_id, limit=1)
-                if records:
-                    return records[0]
+                    records = PredictionRepository.get_predictions(conn, route_id=route_id, limit=1)
+                    if records:
+                        return records[0]
+            except Exception:
+                pass
 
         return {
             "prediction_id": 0,

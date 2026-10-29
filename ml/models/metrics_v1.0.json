@@ -1,0 +1,32 @@
+{
+  "status": "success",
+  "model_name": "RandomForestRegressor",
+  "model_version": "v1.0",
+  "trained_at": "2026-10-29T11:16:04.944368",
+  "artifact_path": "./ml/models\\demand_model_v1.0.joblib",
+  "metrics": {
+    "baseline_mae": 44.62,
+    "baseline_rmse": 55.58,
+    "baseline_r2": 0.3146,
+    "rf_mae": 16.57,
+    "rf_rmse": 20.99,
+    "rf_r2": 0.9022,
+    "mae_improvement_pct": 62.85,
+    "rmse_improvement_pct": 62.23,
+    "train_samples": 388,
+    "test_samples": 98
+  },
+  "feature_importance": {
+    "departure_hour": 0.3644,
+    "route_hist_mean": 0.2378,
+    "cancellations_count": 0.1574,
+    "is_weekend": 0.0901,
+    "day_of_week": 0.0779,
+    "duration_est_minutes": 0.0207,
+    "route_id": 0.0185,
+    "avg_base_fare": 0.0175,
+    "total_distance_km": 0.0158,
+    "month_of_year": 0.0
+  },
+  "provenance": "synthetic_simulation"
+}
