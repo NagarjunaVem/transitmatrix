@@ -168,7 +168,16 @@ python ml/verify_pipeline.py
 python ml/benchmark.py
 ```
 
-### 5.7 Docker Compose Deployment
+### 5.7 Launch React Frontend Dashboard (Person 3)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+- Interactive Web App: http://localhost:5173
+- Production Build: npm run build
+
+### 5.8 Docker Compose Deployment
 ```bash
 docker compose up --build
 ```
